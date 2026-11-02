@@ -3,6 +3,11 @@ import re
 from pathlib import Path
 from urllib.parse import urlparse
 
+if __package__:
+    from .npm_client import get_dependencies
+else:
+    from npm_client import get_dependencies
+
 
 def package_name(value):
     pattern = r"(?:@[a-z0-9_-]+/)?[a-z0-9_-][a-z0-9._-]*"
@@ -82,12 +87,25 @@ def get_settings():
 
 def main():
     args = get_settings()
-    print(f"package = {args.package}")
-    print(f"repository = {args.repository}")
-    print(f"test = {args.test}")
-    print(f"version = {args.version}")
-    print(f"output = {args.output}")
-    print(f"max_depth = {args.max_depth}")
+
+    if args.test:
+        print("Работу с тестовым графом добавим на третьем этапе.")
+        return
+
+    try:
+        dependencies = get_dependencies(
+            args.repository, args.package, args.version
+        )
+    except ValueError as error:
+        print(f"Ошибка: {error}")
+        raise SystemExit(1)
+
+    print(f"Прямые зависимости {args.package}@{args.version}:")
+    if not dependencies:
+        print("Зависимостей нет.")
+    else:
+        for name, version in sorted(dependencies.items()):
+            print(f"{name}: {version}")
 
 
 if __name__ == "__main__":
