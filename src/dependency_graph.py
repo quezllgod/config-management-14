@@ -7,7 +7,7 @@ def load_test_repository(filename):
     try:
         text = Path(filename).read_text(encoding="utf-8-sig")
         data = json.loads(text)
-    except (OSError, ValueError) as error:
+    except (OSError, ValueError, UnicodeError) as error:
         raise ValueError("Не удалось прочитать тестовый JSON") from error
 
     if not isinstance(data, dict):

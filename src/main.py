@@ -4,12 +4,14 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 if __package__:
-    from .npm_client import make_children_loader
+    from .npm_client import make_children_loader, get_dependencies
+    from .visualization import save_mermaid, render_png
     from .dependency_graph import (
         build_graph, load_test_repository, print_graph, reverse_graph
     )
 else:
-    from npm_client import make_children_loader
+    from npm_client import make_children_loader, get_dependencies
+    from visualization import save_mermaid, render_png
     from dependency_graph import (
         build_graph, load_test_repository, print_graph, reverse_graph
     )
@@ -105,6 +107,10 @@ def main():
             get_children = repository.__getitem__
         else:
             root = f"{args.package}@{args.version}"
+            if args.max_depth == 0:
+                get_dependencies(
+                    args.repository, args.package, args.version
+                )
             get_children = make_children_loader(args.repository)
 
         graph = build_graph(root, get_children, args.max_depth)
@@ -115,6 +121,17 @@ def main():
     print_graph(graph)
     print("\nОбратные зависимости в построенном графе:")
     print_graph(reverse_graph(graph))
+
+    try:
+        source = save_mermaid(graph, args.output)
+        render_png(source, args.output)
+    except ValueError as error:
+        print(f"Ошибка: {error}")
+        raise SystemExit(1)
+
+    print(f"\nСхема сохранена: {source}")
+    print(f"Изображение сохранено: {args.output}")
+
 
 
 if __name__ == "__main__":
