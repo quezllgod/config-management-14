@@ -64,3 +64,12 @@ def print_graph(graph):
             print(f"{node} -> {', '.join(sorted(dependencies))}")
         else:
             print(f"{node} -> нет раскрытых зависимостей")
+
+def reverse_graph(graph):
+    result = {node: set() for node in graph}
+
+    for parent, dependencies in graph.items():
+        for dependency in dependencies:
+            result.setdefault(dependency, set()).add(parent)
+
+    return result

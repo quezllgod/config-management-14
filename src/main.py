@@ -6,12 +6,12 @@ from urllib.parse import urlparse
 if __package__:
     from .npm_client import make_children_loader
     from .dependency_graph import (
-        build_graph, load_test_repository, print_graph
+        build_graph, load_test_repository, print_graph, reverse_graph
     )
 else:
     from npm_client import make_children_loader
     from dependency_graph import (
-        build_graph, load_test_repository, print_graph
+        build_graph, load_test_repository, print_graph, reverse_graph
     )
 
 
@@ -113,6 +113,8 @@ def main():
         raise SystemExit(1)
 
     print_graph(graph)
+    print("\nОбратные зависимости в построенном графе:")
+    print_graph(reverse_graph(graph))
 
 
 if __name__ == "__main__":
