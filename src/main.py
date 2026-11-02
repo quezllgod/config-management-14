@@ -4,9 +4,15 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 if __package__:
-    from .npm_client import get_dependencies
+    from .npm_client import make_children_loader
+    from .dependency_graph import (
+        build_graph, load_test_repository, print_graph
+    )
 else:
-    from npm_client import get_dependencies
+    from npm_client import make_children_loader
+    from dependency_graph import (
+        build_graph, load_test_repository, print_graph
+    )
 
 
 def package_name(value):
@@ -88,24 +94,25 @@ def get_settings():
 def main():
     args = get_settings()
 
-    if args.test:
-        print("Работу с тестовым графом добавим на третьем этапе.")
-        return
-
     try:
-        dependencies = get_dependencies(
-            args.repository, args.package, args.version
-        )
+        if args.test:
+            repository = load_test_repository(args.repository)
+            if args.package not in repository:
+                raise ValueError(
+                    "Пакет отсутствует в тестовом репозитории"
+                )
+            root = args.package
+            get_children = repository.__getitem__
+        else:
+            root = f"{args.package}@{args.version}"
+            get_children = make_children_loader(args.repository)
+
+        graph = build_graph(root, get_children, args.max_depth)
     except ValueError as error:
         print(f"Ошибка: {error}")
         raise SystemExit(1)
 
-    print(f"Прямые зависимости {args.package}@{args.version}:")
-    if not dependencies:
-        print("Зависимостей нет.")
-    else:
-        for name, version in sorted(dependencies.items()):
-            print(f"{name}: {version}")
+    print_graph(graph)
 
 
 if __name__ == "__main__":

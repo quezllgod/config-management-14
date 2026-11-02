@@ -3,6 +3,11 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import quote
 from urllib.request import urlopen
 
+if __package__:
+    from .version_rules import choose_version
+else:
+    from version_rules import choose_version
+
 
 def get_dependencies(repository, package, version):
     base = repository.rstrip("/")
@@ -41,3 +46,45 @@ def get_dependencies(repository, package, version):
         raise ValueError("Имена и версии зависимостей должны быть строками")
 
     return dependencies
+
+
+def resolve_version(repository, package, requirement):
+    url = f"{repository.rstrip('/')}/{quote(package, safe='')}"
+
+    try:
+        with urlopen(url, timeout=20) as response:
+            data = json.load(response)
+    except (URLError, OSError, ValueError) as error:
+        raise ValueError(
+            f"Не удалось получить версии пакета {package}"
+        ) from error
+
+    if not isinstance(data, dict):
+        raise ValueError("Некорректное описание пакета")
+
+    versions = data.get("versions")
+    if not isinstance(versions, dict):
+        raise ValueError(f"Нет списка версий пакета {package}")
+
+    return choose_version(versions, requirement)
+
+
+def make_children_loader(repository):
+    resolved = {}
+
+    def get_children(node):
+        package, version = node.rsplit("@", 1)
+        dependencies = get_dependencies(repository, package, version)
+        children = []
+
+        for name, requirement in sorted(dependencies.items()):
+            key = (name, requirement)
+            if key not in resolved:
+                resolved[key] = resolve_version(
+                    repository, name, requirement
+                )
+            children.append(f"{name}@{resolved[key]}")
+
+        return children
+
+    return get_children
